@@ -566,4 +566,4 @@ const RestaurantApp = () => {
   );
 };
 
-export default Restaurant
+export default RestaurantApp;
