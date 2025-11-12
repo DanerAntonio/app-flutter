@@ -1,6 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import { Home, UtensilsCrossed, Package, Users, TrendingUp, Calendar, DollarSign, ShoppingCart, Plus, X, Check, AlertCircle } from 'lucide-react';
 
+// ============= CONFIGURACIÓN SUPABASE =============
+// IMPORTANTE: Necesitas crear un archivo .env.local con:
+// VITE_SUPABASE_URL=tu-url-de-supabase
+// VITE_SUPABASE_ANON_KEY=tu-key-de-supabase
+
+// Para esta demo, usaremos almacenamiento local simulando Supabase
+// En producción, reemplazar con las llamadas reales a Supabase
+
+const useSupabase = () => {
+  // Hook simulado - reemplazar con supabase real
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const query = async (table, operation = 'select', data = null) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Simular delay de red
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const storageKey = `supabase_${table}`;
+      let tableData = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      
+      switch(operation) {
+        case 'select':
+          return tableData;
+        
+        case 'insert':
+          const newItem = { ...data, id: crypto.randomUUID(), created_at: new Date().toISOString() };
+          tableData.push(newItem);
+          localStorage.setItem(storageKey, JSON.stringify(tableData));
+          return newItem;
+        
+        case 'update':
+          tableData = tableData.map(item => 
+            item.id === data.id ? { ...item, ...data, updated_at: new Date().toISOString() } : item
+          );
+          localStorage.setItem(storageKey, JSON.stringify(tableData));
+          return data;
+        
+        case 'delete':
+          tableData = tableData.filter(item => item.id !== data.id);
+          localStorage.setItem(storageKey, JSON.stringify(tableData));
+          return data;
+        
+        default:
+          return tableData;
+      }
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { query, loading, error };
+};
+
 // ============= COMPONENTES UI =============
 
 const Button = ({ children, onClick, variant = 'primary', size = 'md', disabled, className = '' }) => {
@@ -35,8 +95,8 @@ const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 animate-fadeIn">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden animate-slideUp">
         <div className="bg-gradient-to-r from-orange-600 to-amber-600 p-4 flex justify-between items-center">
           <h3 className="text-xl font-bold text-white">{title}</h3>
           <button onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors">
@@ -50,6 +110,12 @@ const Modal = ({ isOpen, onClose, title, children }) => {
     </div>
   );
 };
+
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-600 border-t-transparent"></div>
+  </div>
+);
 
 const Alert = ({ type = 'info', children }) => {
   const types = {
@@ -67,139 +133,182 @@ const Alert = ({ type = 'info', children }) => {
   );
 };
 
-// ============= DATOS INICIALES =============
-
-const inicializarMesas = () => {
-  return Array.from({ length: 12 }, (_, i) => ({
-    id: i + 1,
-    numero: i + 1,
-    capacidad: i % 3 === 0 ? 6 : i % 2 === 0 ? 2 : 4,
-    estado: 'libre',
-    pedidos: [],
-    total: 0
-  }));
-};
-
-const inicializarInventario = () => {
-  return [
-    { id: 1, nombre: 'Pollo', categoria: 'proteina', cantidad: 50, unidad: 'kg', precio_unitario: 8000, stock_minimo: 10 },
-    { id: 2, nombre: 'Carne de Res', categoria: 'proteina', cantidad: 30, unidad: 'kg', precio_unitario: 15000, stock_minimo: 10 },
-    { id: 3, nombre: 'Pescado', categoria: 'proteina', cantidad: 20, unidad: 'kg', precio_unitario: 12000, stock_minimo: 5 },
-    { id: 4, nombre: 'Cerdo', categoria: 'proteina', cantidad: 25, unidad: 'kg', precio_unitario: 10000, stock_minimo: 8 },
-    { id: 5, nombre: 'Arroz', categoria: 'acompañamiento', cantidad: 100, unidad: 'kg', precio_unitario: 2500, stock_minimo: 20 },
-    { id: 6, nombre: 'Papa', categoria: 'acompañamiento', cantidad: 80, unidad: 'kg', precio_unitario: 1500, stock_minimo: 15 },
-    { id: 7, nombre: 'Ensalada', categoria: 'acompañamiento', cantidad: 40, unidad: 'kg', precio_unitario: 3000, stock_minimo: 10 },
-    { id: 8, nombre: 'Frijoles', categoria: 'acompañamiento', cantidad: 60, unidad: 'kg', precio_unitario: 4000, stock_minimo: 15 },
-    { id: 9, nombre: 'Gaseosa', categoria: 'bebida', cantidad: 100, unidad: 'unidades', precio_unitario: 1500, stock_minimo: 20 },
-    { id: 10, nombre: 'Jugo Natural', categoria: 'bebida', cantidad: 50, unidad: 'litros', precio_unitario: 3000, stock_minimo: 10 }
-  ];
-};
-
-const inicializarPlatos = () => {
-  const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  return dias.map((dia, idx) => ({
-    id: idx + 1,
-    dia,
-    platos: [
-      { nombre: 'Bandeja Paisa', precio: 25000, disponible: true },
-      { nombre: 'Pollo Asado', precio: 18000, disponible: true },
-      { nombre: 'Pescado Frito', precio: 22000, disponible: true },
-      { nombre: 'Cerdo BBQ', precio: 20000, disponible: true }
-    ]
-  }));
-};
-
-const inicializarPersonal = () => {
-  return [
-    { id: 1, nombre: 'Juan Pérez', cargo: 'Mesero', salario: 1300000, telefono: '3001234567', activo: true },
-    { id: 2, nombre: 'María López', cargo: 'Cocinera', salario: 1500000, telefono: '3009876543', activo: true },
-    { id: 3, nombre: 'Carlos Ruiz', cargo: 'Cajero', salario: 1300000, telefono: '3012345678', activo: true },
-    { id: 4, nombre: 'Ana García', cargo: 'Mesera', salario: 1300000, telefono: '3023456789', activo: true }
-  ];
-};
-
 // ============= COMPONENTE PRINCIPAL =============
 
 const RestaurantApp = () => {
   const [activeTab, setActiveTab] = useState('mesas');
-  const [mesas, setMesas] = useState(inicializarMesas());
-  const [inventario, setInventario] = useState(inicializarInventario());
-  const [platos] = useState(inicializarPlatos());
-  const [personal] = useState(inicializarPersonal());
-  const [ventas, setVentas] = useState([]);
+  const [mesas, setMesas] = useState([]);
+  const [inventario, setInventario] = useState([]);
+  const [platos, setPlatos] = useState([]);
+  const [personal, setPersonal] = useState([]);
+  const [pedidos, setPedidos] = useState([]);
   const [modalPedido, setModalPedido] = useState({ isOpen: false, mesa: null });
+  const [modalInventario, setModalInventario] = useState({ isOpen: false });
+  
+  const { query, loading, error } = useSupabase();
 
-  const diaActual = new Date().getDay();
-  const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  const menuHoy = platos.find(p => p.dia === dias[diaActual]);
+  // ============= INICIALIZACIÓN =============
+  
+  useEffect(() => {
+    cargarDatos();
+  }, []);
 
-  const tomarPedido = (mesaId, plato) => {
-    const nuevasMesas = mesas.map(mesa => {
-      if (mesa.id === mesaId) {
-        const nuevosPedidos = [...mesa.pedidos, { ...plato, cantidad: 1 }];
-        return {
-          ...mesa,
-          estado: 'ocupada',
-          pedidos: nuevosPedidos,
-          total: nuevosPedidos.reduce((sum, p) => sum + p.precio, 0)
-        };
+  const cargarDatos = async () => {
+    try {
+      const [mesasData, inventarioData, platosData, personalData, pedidosData] = await Promise.all([
+        query('mesas'),
+        query('inventario'),
+        query('platos'),
+        query('personal'),
+        query('pedidos')
+      ]);
+
+      if (mesasData.length === 0) await inicializarDatos();
+      else {
+        setMesas(mesasData);
+        setInventario(inventarioData);
+        setPlatos(platosData);
+        setPersonal(personalData);
+        setPedidos(pedidosData);
       }
-      return mesa;
-    });
-    setMesas(nuevasMesas);
-    setModalPedido({ isOpen: false, mesa: null });
-  };
-
-  const cerrarMesa = (mesaId) => {
-    const mesa = mesas.find(m => m.id === mesaId);
-    if (mesa && mesa.total > 0) {
-      if (window.confirm(`¿Cerrar mesa ${mesa.numero} con total de $${mesa.total.toLocaleString()}?`)) {
-        const nuevaVenta = {
-          id: Date.now(),
-          mesaId,
-          total: mesa.total,
-          pedidos: mesa.pedidos,
-          fecha: new Date()
-        };
-        setVentas([...ventas, nuevaVenta]);
-        
-        const nuevasMesas = mesas.map(m => 
-          m.id === mesaId ? { ...m, estado: 'libre', pedidos: [], total: 0 } : m
-        );
-        setMesas(nuevasMesas);
-      }
+    } catch (err) {
+      console.error('Error cargando datos:', err);
     }
   };
 
-  const actualizarInventario = (itemId, nuevaCantidad) => {
-    const nuevoInventario = inventario.map(item =>
-      item.id === itemId ? { ...item, cantidad: parseFloat(nuevaCantidad) || 0 } : item
-    );
-    setInventario(nuevoInventario);
+  const inicializarDatos = async () => {
+    const mesasIniciales = Array.from({ length: 12 }, (_, i) => ({
+      numero: i + 1,
+      capacidad: i % 3 === 0 ? 6 : i % 2 === 0 ? 2 : 4,
+      estado: 'libre'
+    }));
+
+    const inventarioInicial = [
+      { nombre: 'Pollo', categoria: 'proteina', cantidad: 50, unidad: 'kg', precio_unitario: 8000, stock_minimo: 10 },
+      { nombre: 'Carne de Res', categoria: 'proteina', cantidad: 30, unidad: 'kg', precio_unitario: 15000, stock_minimo: 10 },
+      { nombre: 'Pescado', categoria: 'proteina', cantidad: 20, unidad: 'kg', precio_unitario: 12000, stock_minimo: 5 },
+      { nombre: 'Cerdo', categoria: 'proteina', cantidad: 25, unidad: 'kg', precio_unitario: 10000, stock_minimo: 8 },
+      { nombre: 'Arroz', categoria: 'acompañamiento', cantidad: 100, unidad: 'kg', precio_unitario: 2500, stock_minimo: 20 },
+      { nombre: 'Papa', categoria: 'acompañamiento', cantidad: 80, unidad: 'kg', precio_unitario: 1500, stock_minimo: 15 },
+      { nombre: 'Ensalada', categoria: 'acompañamiento', cantidad: 40, unidad: 'kg', precio_unitario: 3000, stock_minimo: 10 },
+      { nombre: 'Frijoles', categoria: 'acompañamiento', cantidad: 60, unidad: 'kg', precio_unitario: 4000, stock_minimo: 15 }
+    ];
+
+    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const platosIniciales = dias.flatMap((dia, idx) => [
+      { nombre: 'Bandeja Paisa', precio: 25000, categoria: 'plato_fuerte', dia_semana: idx, disponible: true },
+      { nombre: 'Pollo Asado', precio: 18000, categoria: 'plato_fuerte', dia_semana: idx, disponible: true },
+      { nombre: 'Pescado Frito', precio: 22000, categoria: 'plato_fuerte', dia_semana: idx, disponible: true }
+    ]);
+
+    const personalInicial = [
+      { nombre: 'Juan Pérez', cargo: 'Mesero', salario: 1300000, telefono: '3001234567', activo: true },
+      { nombre: 'María López', cargo: 'Cocinera', salario: 1500000, telefono: '3009876543', activo: true },
+      { nombre: 'Carlos Ruiz', cargo: 'Cajero', salario: 1300000, telefono: '3012345678', activo: true }
+    ];
+
+    for (const mesa of mesasIniciales) await query('mesas', 'insert', mesa);
+    for (const item of inventarioInicial) await query('inventario', 'insert', item);
+    for (const plato of platosIniciales) await query('platos', 'insert', plato);
+    for (const empleado of personalInicial) await query('personal', 'insert', empleado);
+
+    await cargarDatos();
   };
 
+  // ============= FUNCIONES DE NEGOCIO =============
+
+  const abrirModalPedido = (mesa) => {
+    setModalPedido({ isOpen: true, mesa });
+  };
+
+  const agregarPedido = async (mesaId, plato) => {
+    try {
+      const pedido = await query('pedidos', 'insert', {
+        mesa_id: mesaId,
+        nombre_plato: plato.nombre,
+        precio: plato.precio,
+        cantidad: 1,
+        estado: 'pendiente'
+      });
+
+      await query('mesas', 'update', {
+        id: mesaId,
+        estado: 'ocupada'
+      });
+
+      await cargarDatos();
+      setModalPedido({ isOpen: false, mesa: null });
+    } catch (err) {
+      console.error('Error agregando pedido:', err);
+    }
+  };
+
+  const cerrarMesa = async (mesaId) => {
+    try {
+      const pedidosMesa = pedidos.filter(p => p.mesa_id === mesaId);
+      const total = pedidosMesa.reduce((sum, p) => sum + p.precio, 0);
+
+      if (window.confirm(`¿Cerrar mesa con total de $${total.toLocaleString()}?`)) {
+        await query('mesas', 'update', { id: mesaId, estado: 'libre' });
+        
+        for (const pedido of pedidosMesa) {
+          await query('pedidos', 'update', { ...pedido, estado: 'pagado' });
+        }
+
+        await cargarDatos();
+      }
+    } catch (err) {
+      console.error('Error cerrando mesa:', err);
+    }
+  };
+
+  const actualizarInventario = async (itemId, nuevaCantidad) => {
+    try {
+      const item = inventario.find(i => i.id === itemId);
+      await query('inventario', 'update', { ...item, cantidad: parseFloat(nuevaCantidad) });
+      await cargarDatos();
+    } catch (err) {
+      console.error('Error actualizando inventario:', err);
+    }
+  };
+
+  // ============= CÁLCULOS =============
+
   const calcularEstadisticas = () => {
-    const totalVentas = ventas.reduce((sum, v) => sum + v.total, 0);
-    const nominaMensual = personal.reduce((sum, p) => sum + p.salario, 0);
+    const pedidosPagados = pedidos.filter(p => p.estado === 'pagado');
+    const totalVentas = pedidosPagados.reduce((sum, p) => sum + p.precio, 0);
+    const totalGastos = personal.reduce((sum, p) => sum + p.salario, 0);
     const valorInventario = inventario.reduce((sum, i) => sum + (i.cantidad * i.precio_unitario), 0);
 
     return {
       ventasMes: totalVentas,
-      gastosMes: nominaMensual,
-      gananciaMes: totalVentas - nominaMensual,
+      gastosMes: totalGastos,
+      gananciaMes: totalVentas - totalGastos,
       inventarioValor: valorInventario,
-      pedidosTotal: ventas.length,
-      mesasOcupadas: mesas.filter(m => m.estado === 'ocupada').length
+      pedidosTotal: pedidosPagados.length
     };
   };
 
   const stats = calcularEstadisticas();
+  const diaActual = new Date().getDay();
+  const platosHoy = platos.filter(p => p.dia_semana === diaActual);
+  const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+  // ============= RENDER =============
+
+  if (loading && mesas.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
       <div className="container mx-auto p-4 max-w-7xl">
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          {/* Header */}
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-6">
           <div className="bg-gradient-to-r from-orange-600 to-amber-600 p-6">
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
               <UtensilsCrossed size={36} />
@@ -231,6 +340,12 @@ const RestaurantApp = () => {
 
           {/* Content */}
           <div className="p-6">
+            {error && (
+              <Alert type="error" className="mb-4">
+                Error: {error}
+              </Alert>
+            )}
+
             {/* TAB: MESAS */}
             {activeTab === 'mesas' && (
               <div>
@@ -249,46 +364,51 @@ const RestaurantApp = () => {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {mesas.map(mesa => (
-                    <div
-                      key={mesa.id}
-                      className={`p-6 rounded-xl shadow-lg transition-all cursor-pointer ${
-                        mesa.estado === 'libre'
-                          ? 'bg-green-50 border-2 border-green-300 hover:shadow-xl'
-                          : 'bg-red-50 border-2 border-red-300'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <h3 className="text-xl font-bold text-gray-800">Mesa {mesa.numero}</h3>
-                        <p className="text-sm text-gray-600">Cap: {mesa.capacidad} personas</p>
-                        <span
-                          className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mt-2 ${
-                            mesa.estado === 'libre'
-                              ? 'bg-green-200 text-green-800'
-                              : 'bg-red-200 text-red-800'
-                          }`}
-                        >
-                          {mesa.estado.toUpperCase()}
-                        </span>
+                  {mesas.map(mesa => {
+                    const pedidosMesa = pedidos.filter(p => p.mesa_id === mesa.id && p.estado !== 'pagado');
+                    const total = pedidosMesa.reduce((sum, p) => sum + p.precio, 0);
 
-                        {mesa.estado === 'ocupada' && (
-                          <div className="mt-4 space-y-2">
-                            <div className="text-sm text-gray-600">{mesa.pedidos.length} pedido(s)</div>
-                            <div className="text-lg font-bold text-orange-600">${mesa.total.toLocaleString()}</div>
-                            <Button onClick={() => cerrarMesa(mesa.id)} variant="success" size="sm" className="w-full">
-                              <Check size={16} /> Cerrar Mesa
+                    return (
+                      <div
+                        key={mesa.id}
+                        className={`p-6 rounded-xl shadow-lg transition-all cursor-pointer ${
+                          mesa.estado === 'libre'
+                            ? 'bg-green-50 border-2 border-green-300 hover:shadow-xl'
+                            : 'bg-red-50 border-2 border-red-300'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <h3 className="text-xl font-bold text-gray-800">Mesa {mesa.numero}</h3>
+                          <p className="text-sm text-gray-600">Cap: {mesa.capacidad} personas</p>
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mt-2 ${
+                              mesa.estado === 'libre'
+                                ? 'bg-green-200 text-green-800'
+                                : 'bg-red-200 text-red-800'
+                            }`}
+                          >
+                            {mesa.estado.toUpperCase()}
+                          </span>
+
+                          {mesa.estado === 'ocupada' && (
+                            <div className="mt-4 space-y-2">
+                              <div className="text-sm text-gray-600">{pedidosMesa.length} pedido(s)</div>
+                              <div className="text-lg font-bold text-orange-600">${total.toLocaleString()}</div>
+                              <Button onClick={() => cerrarMesa(mesa.id)} variant="success" size="sm" className="w-full">
+                                <Check size={16} /> Cerrar Mesa
+                              </Button>
+                            </div>
+                          )}
+
+                          {mesa.estado === 'libre' && (
+                            <Button onClick={() => abrirModalPedido(mesa)} variant="primary" size="sm" className="w-full mt-4">
+                              <Plus size={16} /> Tomar Pedido
                             </Button>
-                          </div>
-                        )}
-
-                        {mesa.estado === 'libre' && (
-                          <Button onClick={() => setModalPedido({ isOpen: true, mesa })} variant="primary" size="sm" className="w-full mt-4">
-                            <Plus size={16} /> Tomar Pedido
-                          </Button>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -296,17 +416,19 @@ const RestaurantApp = () => {
             {/* TAB: MENÚ */}
             {activeTab === 'menu' && (
               <div>
-                <h2 className="text-2xl font-bold mb-4 text-gray-800">Menú de la Semana</h2>
+                <h2 className="text-2xl font-bold mb-4 text-gray-800">Menú Semanal</h2>
                 <Alert type="info" className="mb-6">
-                  <strong>Hoy es {dias[diaActual]}</strong> - Mostrando platos disponibles
+                  <strong>Hoy es {dias[diaActual]}</strong> - Mostrando {platosHoy.length} platos disponibles
                 </Alert>
 
                 <div className="space-y-6">
-                  {platos.map(menuDia => {
-                    const esHoy = menuDia.dia === dias[diaActual];
+                  {dias.map((dia, idx) => {
+                    const platosDia = platos.filter(p => p.dia_semana === idx);
+                    const esHoy = idx === diaActual;
+
                     return (
                       <div
-                        key={menuDia.id}
+                        key={idx}
                         className={`p-6 rounded-xl shadow-lg ${
                           esHoy
                             ? 'bg-gradient-to-r from-orange-100 to-amber-100 border-2 border-orange-400'
@@ -315,15 +437,20 @@ const RestaurantApp = () => {
                       >
                         <h3 className="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
                           <Calendar size={24} className="text-orange-600" />
-                          {menuDia.dia} {esHoy && <span className="text-sm bg-orange-600 text-white px-2 py-1 rounded">HOY</span>}
+                          {dia} {esHoy && <span className="text-sm bg-orange-600 text-white px-2 py-1 rounded">HOY</span>}
                         </h3>
-                        <div className="grid md:grid-cols-2 gap-3">
-                          {menuDia.platos.map((plato, idx) => (
-                            <div key={idx} className="bg-white p-4 rounded-lg shadow border border-gray-200">
-                              <div className="flex justify-between items-center">
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {platosDia.map((plato) => (
+                            <div key={plato.id} className="bg-white p-4 rounded-lg shadow border border-gray-200">
+                              <div className="flex justify-between items-start">
                                 <span className="font-semibold text-gray-800">{plato.nombre}</span>
                                 <span className="text-orange-600 font-bold">${plato.precio.toLocaleString()}</span>
                               </div>
+                              {plato.disponible ? (
+                                <span className="text-xs text-green-600 mt-1 inline-block">✓ Disponible</span>
+                              ) : (
+                                <span className="text-xs text-red-600 mt-1 inline-block">✗ Agotado</span>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -339,14 +466,12 @@ const RestaurantApp = () => {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-gray-800">Control de Inventario</h2>
-                  <div className="bg-yellow-100 border border-yellow-300 px-4 py-2 rounded-lg">
-                    <span className="font-semibold text-yellow-800">
-                      Valor Total: ${stats.inventarioValor.toLocaleString()}
-                    </span>
-                  </div>
+                  <Alert type="warning">
+                    Valor Total: ${stats.inventarioValor.toLocaleString()}
+                  </Alert>
                 </div>
 
-                <div className="grid gap-4">
+                <div className="space-y-6">
                   {['proteina', 'acompañamiento', 'bebida'].map(categoria => (
                     <div key={categoria} className="bg-white rounded-xl shadow-lg p-6">
                       <h3 className="text-xl font-bold mb-4 text-gray-800 capitalize flex items-center gap-2">
@@ -404,11 +529,9 @@ const RestaurantApp = () => {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-gray-800">Gestión de Personal</h2>
-                  <div className="bg-blue-100 border border-blue-300 px-4 py-2 rounded-lg">
-                    <span className="font-semibold text-blue-800">
-                      Nómina Mensual: ${stats.gastosMes.toLocaleString()}
-                    </span>
-                  </div>
+                  <Alert type="info">
+                    Nómina Mensual: ${personal.reduce((sum, p) => sum + p.salario, 0).toLocaleString()}
+                  </Alert>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
@@ -429,6 +552,12 @@ const RestaurantApp = () => {
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-600">Teléfono:</span>
                               <span className="font-semibold">{empleado.telefono}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Estado:</span>
+                              <span className={`font-semibold ${empleado.activo ? 'text-green-600' : 'text-red-600'}`}>
+                                {empleado.activo ? 'Activo' : 'Inactivo'}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -486,7 +615,7 @@ const RestaurantApp = () => {
                       <h3 className="text-lg font-semibold">Mesas Activas</h3>
                       <Home size={28} />
                     </div>
-                    <p className="text-3xl font-bold">{stats.mesasOcupadas}</p>
+                    <p className="text-3xl font-bold">{mesas.filter(m => m.estado === 'ocupada').length}</p>
                     <p className="text-sm text-purple-100 mt-1">De {mesas.length} totales</p>
                   </div>
 
@@ -495,35 +624,42 @@ const RestaurantApp = () => {
                       <h3 className="text-lg font-semibold">Personal</h3>
                       <Users size={28} />
                     </div>
-                    <p className="text-3xl font-bold">{personal.length}</p>
+                    <p className="text-3xl font-bold">{personal.filter(p => p.activo).length}</p>
                     <p className="text-sm text-amber-100 mt-1">Empleados activos</p>
                   </div>
                 </div>
 
-                {/* Últimas Ventas */}
+                {/* Últimos Pedidos */}
                 <div className="bg-white rounded-xl shadow-lg p-6">
-                  <h3 className="text-xl font-bold mb-4 text-gray-800">Últimas Ventas</h3>
+                  <h3 className="text-xl font-bold mb-4 text-gray-800">Últimos Pedidos</h3>
                   <div className="space-y-3">
-                    {ventas.slice(-10).reverse().map(venta => (
-                      <div key={venta.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="font-semibold text-gray-800">Mesa {venta.mesaId}</p>
-                          <p className="text-sm text-gray-600">
-                            {venta.fecha.toLocaleString('es-CO')}
-                          </p>
+                    {pedidos.slice(-10).reverse().map(pedido => {
+                      const mesa = mesas.find(m => m.id === pedido.mesa_id);
+                      return (
+                        <div key={pedido.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                          <div>
+                            <p className="font-semibold text-gray-800">
+                              Mesa {mesa?.numero} - {pedido.nombre_plato}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {new Date(pedido.created_at).toLocaleString('es-CO')}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xl font-bold text-orange-600">
+                              ${pedido.precio.toLocaleString()}
+                            </p>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              pedido.estado === 'pagado' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {pedido.estado}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-orange-600">
-                            ${venta.total.toLocaleString()}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {venta.pedidos.length} producto(s)
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    {ventas.length === 0 && (
-                      <p className="text-center text-gray-500 py-8">No hay ventas registradas aún</p>
+                      );
+                    })}
+                    {pedidos.length === 0 && (
+                      <p className="text-center text-gray-500 py-8">No hay pedidos registrados aún</p>
                     )}
                   </div>
                 </div>
@@ -544,24 +680,51 @@ const RestaurantApp = () => {
             </Alert>
 
             <div className="grid gap-3">
-              {menuHoy?.platos.map((plato, idx) => (
+              {platosHoy.map(plato => (
                 <button
-                  key={idx}
-                  onClick={() => tomarPedido(modalPedido.mesa.id, plato)}
+                  key={plato.id}
+                  onClick={() => agregarPedido(modalPedido.mesa.id, plato)}
                   className="flex justify-between items-center p-4 bg-white border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all"
+                  disabled={!plato.disponible}
                 >
                   <div className="text-left">
                     <p className="font-semibold text-gray-800">{plato.nombre}</p>
+                    <p className="text-sm text-gray-600">{plato.categoria}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-orange-600">${plato.precio.toLocaleString()}</p>
+                    {!plato.disponible && (
+                      <span className="text-xs text-red-600">Agotado</span>
+                    )}
                   </div>
                 </button>
               ))}
+
+              {platosHoy.length === 0 && (
+                <p className="text-center text-gray-500 py-8">No hay platos disponibles para hoy</p>
+              )}
             </div>
           </div>
         </Modal>
       </div>
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
+        }
+        .animate-slideUp {
+          animation: slideUp 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 };
