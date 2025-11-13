@@ -1,69 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Home, UtensilsCrossed, Package, Users, TrendingUp, Calendar, DollarSign, ShoppingCart, Plus, X, Check, AlertCircle } from 'lucide-react';
-
-// ============= CONFIGURACIÓN SUPABASE =============
-// IMPORTANTE: Necesitas crear un archivo .env.local con:
-// VITE_SUPABASE_URL=tu-url-de-supabase
-// VITE_SUPABASE_ANON_KEY=tu-key-de-supabase
-
-// Para esta demo, usaremos almacenamiento local simulando Supabase
-// En producción, reemplazar con las llamadas reales a Supabase
-
-const useSupabase = () => {
-  // Hook simulado - reemplazar con supabase real
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const query = async (table, operation = 'select', data = null) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Simular delay de red
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const storageKey = `supabase_${table}`;
-      let tableData = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      
-      switch(operation) {
-        case 'select':
-          return tableData;
-        
-        case 'insert':
-          const newItem = { ...data, id: crypto.randomUUID(), created_at: new Date().toISOString() };
-          tableData.push(newItem);
-          localStorage.setItem(storageKey, JSON.stringify(tableData));
-          return newItem;
-        
-        case 'update':
-          tableData = tableData.map(item => 
-            item.id === data.id ? { ...item, ...data, updated_at: new Date().toISOString() } : item
-          );
-          localStorage.setItem(storageKey, JSON.stringify(tableData));
-          return data;
-        
-        case 'delete':
-          tableData = tableData.filter(item => item.id !== data.id);
-          localStorage.setItem(storageKey, JSON.stringify(tableData));
-          return data;
-        
-        default:
-          return tableData;
-      }
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { query, loading, error };
-};
+import { Home, UtensilsCrossed, Package, Users, TrendingUp, Calendar, DollarSign, ShoppingCart, Plus, X, Check, AlertCircle, Edit, Trash2, Save } from 'lucide-react';
 
 // ============= COMPONENTES UI =============
 
-const Button = ({ children, onClick, variant = 'primary', size = 'md', disabled, className = '' }) => {
+const Button = ({ children, onClick, variant = 'primary', size = 'md', disabled, className = '', type = 'button' }) => {
   const baseClasses = 'font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2';
   
   const variants = {
@@ -82,6 +22,7 @@ const Button = ({ children, onClick, variant = 'primary', size = 'md', disabled,
 
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled}
       className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
@@ -95,8 +36,8 @@ const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden animate-slideUp">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         <div className="bg-gradient-to-r from-orange-600 to-amber-600 p-4 flex justify-between items-center">
           <h3 className="text-xl font-bold text-white">{title}</h3>
           <button onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors">
@@ -111,12 +52,6 @@ const Modal = ({ isOpen, onClose, title, children }) => {
   );
 };
 
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center p-8">
-    <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-600 border-t-transparent"></div>
-  </div>
-);
-
 const Alert = ({ type = 'info', children }) => {
   const types = {
     success: 'bg-green-50 border-green-300 text-green-800',
@@ -126,189 +61,293 @@ const Alert = ({ type = 'info', children }) => {
   };
 
   return (
-    <div className={`border-l-4 p-4 rounded ${types[type]} flex items-start gap-3`}>
+    <div className={`border-l-4 p-4 rounded ${types[type]} flex items-start gap-3 mb-4`}>
       <AlertCircle size={20} className="mt-0.5 flex-shrink-0" />
       <div>{children}</div>
     </div>
   );
 };
 
+const Input = ({ label, type = 'text', value, onChange, required, placeholder, min, step }) => (
+  <div className="mb-4">
+    <label className="block text-sm font-semibold text-gray-700 mb-2">
+      {label} {required && <span className="text-red-600">*</span>}
+    </label>
+    <input
+      type={type}
+      value={value}
+      onChange={onChange}
+      required={required}
+      placeholder={placeholder}
+      min={min}
+      step={step}
+      className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+    />
+  </div>
+);
+
+const Select = ({ label, value, onChange, options, required }) => (
+  <div className="mb-4">
+    <label className="block text-sm font-semibold text-gray-700 mb-2">
+      {label} {required && <span className="text-red-600">*</span>}
+    </label>
+    <select
+      value={value}
+      onChange={onChange}
+      required={required}
+      className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+    >
+      {options.map(opt => (
+        <option key={opt.value} value={opt.value}>{opt.label}</option>
+      ))}
+    </select>
+  </div>
+);
+
+// ============= DATOS INICIALES =============
+
+const inicializarMesas = () => {
+  return Array.from({ length: 12 }, (_, i) => ({
+    id: i + 1,
+    numero: i + 1,
+    capacidad: i % 3 === 0 ? 6 : i % 2 === 0 ? 2 : 4,
+    estado: 'libre',
+    pedidos: [],
+    total: 0
+  }));
+};
+
+const inicializarInventario = () => {
+  return [
+    { id: 1, nombre: 'Pollo', categoria: 'proteina', cantidad: 50, unidad: 'kg', precio_unitario: 8000, stock_minimo: 10 },
+    { id: 2, nombre: 'Carne de Res', categoria: 'proteina', cantidad: 30, unidad: 'kg', precio_unitario: 15000, stock_minimo: 10 },
+    { id: 3, nombre: 'Pescado', categoria: 'proteina', cantidad: 20, unidad: 'kg', precio_unitario: 12000, stock_minimo: 5 },
+    { id: 4, nombre: 'Cerdo', categoria: 'proteina', cantidad: 25, unidad: 'kg', precio_unitario: 10000, stock_minimo: 8 },
+    { id: 5, nombre: 'Arroz', categoria: 'acompañamiento', cantidad: 100, unidad: 'kg', precio_unitario: 2500, stock_minimo: 20 },
+    { id: 6, nombre: 'Papa', categoria: 'acompañamiento', cantidad: 80, unidad: 'kg', precio_unitario: 1500, stock_minimo: 15 },
+    { id: 7, nombre: 'Ensalada', categoria: 'acompañamiento', cantidad: 40, unidad: 'kg', precio_unitario: 3000, stock_minimo: 10 },
+    { id: 8, nombre: 'Frijoles', categoria: 'acompañamiento', cantidad: 60, unidad: 'kg', precio_unitario: 4000, stock_minimo: 15 },
+    { id: 9, nombre: 'Gaseosa', categoria: 'bebida', cantidad: 100, unidad: 'unidades', precio_unitario: 1500, stock_minimo: 20 },
+    { id: 10, nombre: 'Jugo Natural', categoria: 'bebida', cantidad: 50, unidad: 'litros', precio_unitario: 3000, stock_minimo: 10 }
+  ];
+};
+
+const inicializarPlatos = () => {
+  const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  return dias.flatMap((dia, idx) => [
+    { id: `${idx}-1`, nombre: 'Bandeja Paisa', precio: 25000, disponible: true, dia_semana: idx, dia },
+    { id: `${idx}-2`, nombre: 'Pollo Asado', precio: 18000, disponible: true, dia_semana: idx, dia },
+    { id: `${idx}-3`, nombre: 'Pescado Frito', precio: 22000, disponible: true, dia_semana: idx, dia },
+    { id: `${idx}-4`, nombre: 'Cerdo BBQ', precio: 20000, disponible: true, dia_semana: idx, dia }
+  ]);
+};
+
+const inicializarPersonal = () => {
+  return [
+    { id: 1, nombre: 'Juan Pérez', cargo: 'Mesero', salario: 1300000, telefono: '3001234567', activo: true },
+    { id: 2, nombre: 'María López', cargo: 'Cocinera', salario: 1500000, telefono: '3009876543', activo: true },
+    { id: 3, nombre: 'Carlos Ruiz', cargo: 'Cajero', salario: 1300000, telefono: '3012345678', activo: true },
+    { id: 4, nombre: 'Ana García', cargo: 'Mesera', salario: 1300000, telefono: '3023456789', activo: true }
+  ];
+};
+
 // ============= COMPONENTE PRINCIPAL =============
 
 const RestaurantApp = () => {
   const [activeTab, setActiveTab] = useState('mesas');
-  const [mesas, setMesas] = useState([]);
-  const [inventario, setInventario] = useState([]);
-  const [platos, setPlatos] = useState([]);
-  const [personal, setPersonal] = useState([]);
-  const [pedidos, setPedidos] = useState([]);
+  const [mesas, setMesas] = useState(inicializarMesas());
+  const [inventario, setInventario] = useState(inicializarInventario());
+  const [platos, setPlatos] = useState(inicializarPlatos());
+  const [personal, setPersonal] = useState(inicializarPersonal());
+  const [ventas, setVentas] = useState([]);
+  
+  // Modales
   const [modalPedido, setModalPedido] = useState({ isOpen: false, mesa: null });
-  const [modalInventario, setModalInventario] = useState({ isOpen: false });
+  const [modalPersonal, setModalPersonal] = useState({ isOpen: false, empleado: null });
+  const [modalPlato, setModalPlato] = useState({ isOpen: false, plato: null });
+  const [modalInventario, setModalInventario] = useState({ isOpen: false, item: null });
+  const [modalMesa, setModalMesa] = useState({ isOpen: false, mesa: null });
+
+  // Formularios
+  const [formPersonal, setFormPersonal] = useState({ nombre: '', cargo: 'Mesero', salario: '', telefono: '' });
+  const [formPlato, setFormPlato] = useState({ nombre: '', precio: '', dia_semana: 1 });
+  const [formInventario, setFormInventario] = useState({ nombre: '', categoria: 'proteina', cantidad: '', unidad: 'kg', precio_unitario: '', stock_minimo: '' });
+  const [formMesa, setFormMesa] = useState({ numero: '', capacidad: 4 });
+
+  const diaActual = new Date().getDay();
+  const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+  // ============= FUNCIONES MESAS =============
   
-  const { query, loading, error } = useSupabase();
-
-  // ============= INICIALIZACIÓN =============
-  
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
-  const cargarDatos = async () => {
-    try {
-      const [mesasData, inventarioData, platosData, personalData, pedidosData] = await Promise.all([
-        query('mesas'),
-        query('inventario'),
-        query('platos'),
-        query('personal'),
-        query('pedidos')
-      ]);
-
-      if (mesasData.length === 0) await inicializarDatos();
-      else {
-        setMesas(mesasData);
-        setInventario(inventarioData);
-        setPlatos(platosData);
-        setPersonal(personalData);
-        setPedidos(pedidosData);
+  const tomarPedido = (mesaId, plato) => {
+    const nuevasMesas = mesas.map(mesa => {
+      if (mesa.id === mesaId) {
+        const nuevosPedidos = [...mesa.pedidos, { ...plato, cantidad: 1 }];
+        return {
+          ...mesa,
+          estado: 'ocupada',
+          pedidos: nuevosPedidos,
+          total: nuevosPedidos.reduce((sum, p) => sum + p.precio, 0)
+        };
       }
-    } catch (err) {
-      console.error('Error cargando datos:', err);
-    }
+      return mesa;
+    });
+    setMesas(nuevasMesas);
+    setModalPedido({ isOpen: false, mesa: null });
   };
 
-  const inicializarDatos = async () => {
-    const mesasIniciales = Array.from({ length: 12 }, (_, i) => ({
-      numero: i + 1,
-      capacidad: i % 3 === 0 ? 6 : i % 2 === 0 ? 2 : 4,
-      estado: 'libre'
-    }));
-
-    const inventarioInicial = [
-      { nombre: 'Pollo', categoria: 'proteina', cantidad: 50, unidad: 'kg', precio_unitario: 8000, stock_minimo: 10 },
-      { nombre: 'Carne de Res', categoria: 'proteina', cantidad: 30, unidad: 'kg', precio_unitario: 15000, stock_minimo: 10 },
-      { nombre: 'Pescado', categoria: 'proteina', cantidad: 20, unidad: 'kg', precio_unitario: 12000, stock_minimo: 5 },
-      { nombre: 'Cerdo', categoria: 'proteina', cantidad: 25, unidad: 'kg', precio_unitario: 10000, stock_minimo: 8 },
-      { nombre: 'Arroz', categoria: 'acompañamiento', cantidad: 100, unidad: 'kg', precio_unitario: 2500, stock_minimo: 20 },
-      { nombre: 'Papa', categoria: 'acompañamiento', cantidad: 80, unidad: 'kg', precio_unitario: 1500, stock_minimo: 15 },
-      { nombre: 'Ensalada', categoria: 'acompañamiento', cantidad: 40, unidad: 'kg', precio_unitario: 3000, stock_minimo: 10 },
-      { nombre: 'Frijoles', categoria: 'acompañamiento', cantidad: 60, unidad: 'kg', precio_unitario: 4000, stock_minimo: 15 }
-    ];
-
-    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const platosIniciales = dias.flatMap((dia, idx) => [
-      { nombre: 'Bandeja Paisa', precio: 25000, categoria: 'plato_fuerte', dia_semana: idx, disponible: true },
-      { nombre: 'Pollo Asado', precio: 18000, categoria: 'plato_fuerte', dia_semana: idx, disponible: true },
-      { nombre: 'Pescado Frito', precio: 22000, categoria: 'plato_fuerte', dia_semana: idx, disponible: true }
-    ]);
-
-    const personalInicial = [
-      { nombre: 'Juan Pérez', cargo: 'Mesero', salario: 1300000, telefono: '3001234567', activo: true },
-      { nombre: 'María López', cargo: 'Cocinera', salario: 1500000, telefono: '3009876543', activo: true },
-      { nombre: 'Carlos Ruiz', cargo: 'Cajero', salario: 1300000, telefono: '3012345678', activo: true }
-    ];
-
-    for (const mesa of mesasIniciales) await query('mesas', 'insert', mesa);
-    for (const item of inventarioInicial) await query('inventario', 'insert', item);
-    for (const plato of platosIniciales) await query('platos', 'insert', plato);
-    for (const empleado of personalInicial) await query('personal', 'insert', empleado);
-
-    await cargarDatos();
-  };
-
-  // ============= FUNCIONES DE NEGOCIO =============
-
-  const abrirModalPedido = (mesa) => {
-    setModalPedido({ isOpen: true, mesa });
-  };
-
-  const agregarPedido = async (mesaId, plato) => {
-    try {
-      const pedido = await query('pedidos', 'insert', {
-        mesa_id: mesaId,
-        nombre_plato: plato.nombre,
-        precio: plato.precio,
-        cantidad: 1,
-        estado: 'pendiente'
-      });
-
-      await query('mesas', 'update', {
-        id: mesaId,
-        estado: 'ocupada'
-      });
-
-      await cargarDatos();
-      setModalPedido({ isOpen: false, mesa: null });
-    } catch (err) {
-      console.error('Error agregando pedido:', err);
-    }
-  };
-
-  const cerrarMesa = async (mesaId) => {
-    try {
-      const pedidosMesa = pedidos.filter(p => p.mesa_id === mesaId);
-      const total = pedidosMesa.reduce((sum, p) => sum + p.precio, 0);
-
-      if (window.confirm(`¿Cerrar mesa con total de $${total.toLocaleString()}?`)) {
-        await query('mesas', 'update', { id: mesaId, estado: 'libre' });
+  const cerrarMesa = (mesaId) => {
+    const mesa = mesas.find(m => m.id === mesaId);
+    if (mesa && mesa.total > 0) {
+      if (window.confirm(`¿Cerrar mesa ${mesa.numero} con total de $${mesa.total.toLocaleString()}?`)) {
+        const nuevaVenta = {
+          id: Date.now(),
+          mesaId,
+          total: mesa.total,
+          pedidos: mesa.pedidos,
+          fecha: new Date()
+        };
+        setVentas([...ventas, nuevaVenta]);
         
-        for (const pedido of pedidosMesa) {
-          await query('pedidos', 'update', { ...pedido, estado: 'pagado' });
-        }
-
-        await cargarDatos();
+        const nuevasMesas = mesas.map(m => 
+          m.id === mesaId ? { ...m, estado: 'libre', pedidos: [], total: 0 } : m
+        );
+        setMesas(nuevasMesas);
       }
-    } catch (err) {
-      console.error('Error cerrando mesa:', err);
     }
   };
 
-  const actualizarInventario = async (itemId, nuevaCantidad) => {
-    try {
-      const item = inventario.find(i => i.id === itemId);
-      await query('inventario', 'update', { ...item, cantidad: parseFloat(nuevaCantidad) });
-      await cargarDatos();
-    } catch (err) {
-      console.error('Error actualizando inventario:', err);
+  const agregarMesa = (e) => {
+    e.preventDefault();
+    const nuevaMesa = {
+      id: Date.now(),
+      numero: parseInt(formMesa.numero),
+      capacidad: parseInt(formMesa.capacidad),
+      estado: 'libre',
+      pedidos: [],
+      total: 0
+    };
+    setMesas([...mesas, nuevaMesa]);
+    setModalMesa({ isOpen: false, mesa: null });
+    setFormMesa({ numero: '', capacidad: 4 });
+  };
+
+  const eliminarMesa = (mesaId) => {
+    if (window.confirm('¿Eliminar esta mesa?')) {
+      setMesas(mesas.filter(m => m.id !== mesaId));
     }
   };
 
-  // ============= CÁLCULOS =============
+  // ============= FUNCIONES INVENTARIO =============
+  
+  const actualizarInventario = (itemId, nuevaCantidad) => {
+    const nuevoInventario = inventario.map(item =>
+      item.id === itemId ? { ...item, cantidad: parseFloat(nuevaCantidad) || 0 } : item
+    );
+    setInventario(nuevoInventario);
+  };
 
+  const agregarInventario = (e) => {
+    e.preventDefault();
+    const nuevoItem = {
+      id: Date.now(),
+      ...formInventario,
+      cantidad: parseFloat(formInventario.cantidad),
+      precio_unitario: parseFloat(formInventario.precio_unitario),
+      stock_minimo: parseFloat(formInventario.stock_minimo)
+    };
+    setInventario([...inventario, nuevoItem]);
+    setModalInventario({ isOpen: false, item: null });
+    setFormInventario({ nombre: '', categoria: 'proteina', cantidad: '', unidad: 'kg', precio_unitario: '', stock_minimo: '' });
+  };
+
+  const eliminarInventario = (itemId) => {
+    if (window.confirm('¿Eliminar este item del inventario?')) {
+      setInventario(inventario.filter(i => i.id !== itemId));
+    }
+  };
+
+  // ============= FUNCIONES PLATOS =============
+  
+  const agregarPlato = (e) => {
+    e.preventDefault();
+    const nuevoPlato = {
+      id: Date.now(),
+      ...formPlato,
+      precio: parseFloat(formPlato.precio),
+      dia_semana: parseInt(formPlato.dia_semana),
+      dia: dias[parseInt(formPlato.dia_semana)],
+      disponible: true
+    };
+    setPlatos([...platos, nuevoPlato]);
+    setModalPlato({ isOpen: false, plato: null });
+    setFormPlato({ nombre: '', precio: '', dia_semana: 1 });
+  };
+
+  const eliminarPlato = (platoId) => {
+    if (window.confirm('¿Eliminar este plato del menú?')) {
+      setPlatos(platos.filter(p => p.id !== platoId));
+    }
+  };
+
+  const toggleDisponibilidadPlato = (platoId) => {
+    setPlatos(platos.map(p => 
+      p.id === platoId ? { ...p, disponible: !p.disponible } : p
+    ));
+  };
+
+  // ============= FUNCIONES PERSONAL =============
+  
+  const agregarPersonal = (e) => {
+    e.preventDefault();
+    const nuevoEmpleado = {
+      id: Date.now(),
+      ...formPersonal,
+      salario: parseFloat(formPersonal.salario),
+      activo: true
+    };
+    setPersonal([...personal, nuevoEmpleado]);
+    setModalPersonal({ isOpen: false, empleado: null });
+    setFormPersonal({ nombre: '', cargo: 'Mesero', salario: '', telefono: '' });
+  };
+
+  const eliminarPersonal = (empleadoId) => {
+    if (window.confirm('¿Eliminar este empleado?')) {
+      setPersonal(personal.filter(p => p.id !== empleadoId));
+    }
+  };
+
+  const toggleActivoPersonal = (empleadoId) => {
+    setPersonal(personal.map(p => 
+      p.id === empleadoId ? { ...p, activo: !p.activo } : p
+    ));
+  };
+
+  // ============= ESTADÍSTICAS =============
+  
   const calcularEstadisticas = () => {
-    const pedidosPagados = pedidos.filter(p => p.estado === 'pagado');
-    const totalVentas = pedidosPagados.reduce((sum, p) => sum + p.precio, 0);
-    const totalGastos = personal.reduce((sum, p) => sum + p.salario, 0);
+    const totalVentas = ventas.reduce((sum, v) => sum + v.total, 0);
+    const nominaMensual = personal.filter(p => p.activo).reduce((sum, p) => sum + p.salario, 0);
     const valorInventario = inventario.reduce((sum, i) => sum + (i.cantidad * i.precio_unitario), 0);
 
     return {
       ventasMes: totalVentas,
-      gastosMes: totalGastos,
-      gananciaMes: totalVentas - totalGastos,
+      gastosMes: nominaMensual,
+      gananciaMes: totalVentas - nominaMensual,
       inventarioValor: valorInventario,
-      pedidosTotal: pedidosPagados.length
+      pedidosTotal: ventas.length,
+      mesasOcupadas: mesas.filter(m => m.estado === 'ocupada').length
     };
   };
 
   const stats = calcularEstadisticas();
-  const diaActual = new Date().getDay();
   const platosHoy = platos.filter(p => p.dia_semana === diaActual);
-  const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-
-  // ============= RENDER =============
-
-  if (loading && mesas.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
       <div className="container mx-auto p-4 max-w-7xl">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-6">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+          {/* Header */}
           <div className="bg-gradient-to-r from-orange-600 to-amber-600 p-6">
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
               <UtensilsCrossed size={36} />
@@ -340,75 +379,74 @@ const RestaurantApp = () => {
 
           {/* Content */}
           <div className="p-6">
-            {error && (
-              <Alert type="error" className="mb-4">
-                Error: {error}
-              </Alert>
-            )}
-
             {/* TAB: MESAS */}
             {activeTab === 'mesas' && (
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-gray-800">Estado de las Mesas</h2>
-                  <div className="flex gap-4 text-sm">
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                      Libre: {mesas.filter(m => m.estado === 'libre').length}
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                      Ocupada: {mesas.filter(m => m.estado === 'ocupada').length}
-                    </span>
+                  <div className="flex gap-4 items-center">
+                    <div className="flex gap-4 text-sm">
+                      <span className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                        Libre: {mesas.filter(m => m.estado === 'libre').length}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                        Ocupada: {mesas.filter(m => m.estado === 'ocupada').length}
+                      </span>
+                    </div>
+                    <Button onClick={() => { setFormMesa({ numero: mesas.length + 1, capacidad: 4 }); setModalMesa({ isOpen: true }); }} size="sm">
+                      <Plus size={16} /> Agregar Mesa
+                    </Button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {mesas.map(mesa => {
-                    const pedidosMesa = pedidos.filter(p => p.mesa_id === mesa.id && p.estado !== 'pagado');
-                    const total = pedidosMesa.reduce((sum, p) => sum + p.precio, 0);
-
-                    return (
-                      <div
-                        key={mesa.id}
-                        className={`p-6 rounded-xl shadow-lg transition-all cursor-pointer ${
-                          mesa.estado === 'libre'
-                            ? 'bg-green-50 border-2 border-green-300 hover:shadow-xl'
-                            : 'bg-red-50 border-2 border-red-300'
-                        }`}
-                      >
-                        <div className="text-center">
+                  {mesas.map(mesa => (
+                    <div
+                      key={mesa.id}
+                      className={`p-6 rounded-xl shadow-lg transition-all ${
+                        mesa.estado === 'libre'
+                          ? 'bg-green-50 border-2 border-green-300 hover:shadow-xl'
+                          : 'bg-red-50 border-2 border-red-300'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="flex justify-between items-start mb-2">
                           <h3 className="text-xl font-bold text-gray-800">Mesa {mesa.numero}</h3>
-                          <p className="text-sm text-gray-600">Cap: {mesa.capacidad} personas</p>
-                          <span
-                            className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mt-2 ${
-                              mesa.estado === 'libre'
-                                ? 'bg-green-200 text-green-800'
-                                : 'bg-red-200 text-red-800'
-                            }`}
-                          >
-                            {mesa.estado.toUpperCase()}
-                          </span>
-
-                          {mesa.estado === 'ocupada' && (
-                            <div className="mt-4 space-y-2">
-                              <div className="text-sm text-gray-600">{pedidosMesa.length} pedido(s)</div>
-                              <div className="text-lg font-bold text-orange-600">${total.toLocaleString()}</div>
-                              <Button onClick={() => cerrarMesa(mesa.id)} variant="success" size="sm" className="w-full">
-                                <Check size={16} /> Cerrar Mesa
-                              </Button>
-                            </div>
-                          )}
-
-                          {mesa.estado === 'libre' && (
-                            <Button onClick={() => abrirModalPedido(mesa)} variant="primary" size="sm" className="w-full mt-4">
-                              <Plus size={16} /> Tomar Pedido
-                            </Button>
-                          )}
+                          <button onClick={() => eliminarMesa(mesa.id)} className="text-red-600 hover:text-red-800">
+                            <Trash2 size={16} />
+                          </button>
                         </div>
+                        <p className="text-sm text-gray-600">Cap: {mesa.capacidad} personas</p>
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mt-2 ${
+                            mesa.estado === 'libre'
+                              ? 'bg-green-200 text-green-800'
+                              : 'bg-red-200 text-red-800'
+                          }`}
+                        >
+                          {mesa.estado.toUpperCase()}
+                        </span>
+
+                        {mesa.estado === 'ocupada' && (
+                          <div className="mt-4 space-y-2">
+                            <div className="text-sm text-gray-600">{mesa.pedidos.length} pedido(s)</div>
+                            <div className="text-lg font-bold text-orange-600">${mesa.total.toLocaleString()}</div>
+                            <Button onClick={() => cerrarMesa(mesa.id)} variant="success" size="sm" className="w-full">
+                              <Check size={16} /> Cerrar Mesa
+                            </Button>
+                          </div>
+                        )}
+
+                        {mesa.estado === 'libre' && (
+                          <Button onClick={() => setModalPedido({ isOpen: true, mesa })} variant="primary" size="sm" className="w-full mt-4">
+                            <Plus size={16} /> Tomar Pedido
+                          </Button>
+                        )}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -416,16 +454,21 @@ const RestaurantApp = () => {
             {/* TAB: MENÚ */}
             {activeTab === 'menu' && (
               <div>
-                <h2 className="text-2xl font-bold mb-4 text-gray-800">Menú Semanal</h2>
-                <Alert type="info" className="mb-6">
-                  <strong>Hoy es {dias[diaActual]}</strong> - Mostrando {platosHoy.length} platos disponibles
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-bold text-gray-800">Menú de la Semana</h2>
+                  <Button onClick={() => { setFormPlato({ nombre: '', precio: '', dia_semana: diaActual }); setModalPlato({ isOpen: true }); }} size="sm">
+                    <Plus size={16} /> Agregar Plato
+                  </Button>
+                </div>
+                
+                <Alert type="info">
+                  <strong>Hoy es {dias[diaActual]}</strong> - {platosHoy.length} platos disponibles
                 </Alert>
 
                 <div className="space-y-6">
                   {dias.map((dia, idx) => {
                     const platosDia = platos.filter(p => p.dia_semana === idx);
                     const esHoy = idx === diaActual;
-
                     return (
                       <div
                         key={idx}
@@ -439,18 +482,23 @@ const RestaurantApp = () => {
                           <Calendar size={24} className="text-orange-600" />
                           {dia} {esHoy && <span className="text-sm bg-orange-600 text-white px-2 py-1 rounded">HOY</span>}
                         </h3>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="grid md:grid-cols-2 gap-3">
                           {platosDia.map((plato) => (
                             <div key={plato.id} className="bg-white p-4 rounded-lg shadow border border-gray-200">
-                              <div className="flex justify-between items-start">
-                                <span className="font-semibold text-gray-800">{plato.nombre}</span>
-                                <span className="text-orange-600 font-bold">${plato.precio.toLocaleString()}</span>
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                  <span className="font-semibold text-gray-800">{plato.nombre}</span>
+                                  <p className="text-orange-600 font-bold">${plato.precio.toLocaleString()}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={() => toggleDisponibilidadPlato(plato.id)} className={`px-2 py-1 text-xs rounded ${plato.disponible ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                    {plato.disponible ? 'Disponible' : 'Agotado'}
+                                  </button>
+                                  <button onClick={() => eliminarPlato(plato.id)} className="text-red-600 hover:text-red-800">
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
                               </div>
-                              {plato.disponible ? (
-                                <span className="text-xs text-green-600 mt-1 inline-block">✓ Disponible</span>
-                              ) : (
-                                <span className="text-xs text-red-600 mt-1 inline-block">✗ Agotado</span>
-                              )}
                             </div>
                           ))}
                         </div>
@@ -466,12 +514,19 @@ const RestaurantApp = () => {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-gray-800">Control de Inventario</h2>
-                  <Alert type="warning">
-                    Valor Total: ${stats.inventarioValor.toLocaleString()}
-                  </Alert>
+                  <div className="flex gap-4 items-center">
+                    <div className="bg-yellow-100 border border-yellow-300 px-4 py-2 rounded-lg">
+                      <span className="font-semibold text-yellow-800">
+                        Valor Total: ${stats.inventarioValor.toLocaleString()}
+                      </span>
+                    </div>
+                    <Button onClick={() => { setFormInventario({ nombre: '', categoria: 'proteina', cantidad: '', unidad: 'kg', precio_unitario: '', stock_minimo: '' }); setModalInventario({ isOpen: true }); }} size="sm">
+                      <Plus size={16} /> Agregar Item
+                    </Button>
+                  </div>
                 </div>
 
-                <div className="space-y-6">
+                <div className="grid gap-4">
                   {['proteina', 'acompañamiento', 'bebida'].map(categoria => (
                     <div key={categoria} className="bg-white rounded-xl shadow-lg p-6">
                       <h3 className="text-xl font-bold mb-4 text-gray-800 capitalize flex items-center gap-2">
@@ -492,7 +547,12 @@ const RestaurantApp = () => {
                               >
                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                   <div className="flex-1">
-                                    <h4 className="font-bold text-gray-800">{item.nombre}</h4>
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-bold text-gray-800">{item.nombre}</h4>
+                                      <button onClick={() => eliminarInventario(item.id)} className="text-red-600 hover:text-red-800">
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
                                     <p className="text-sm text-gray-600">
                                       ${item.precio_unitario.toLocaleString()}/{item.unidad}
                                     </p>
@@ -529,21 +589,40 @@ const RestaurantApp = () => {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-gray-800">Gestión de Personal</h2>
-                  <Alert type="info">
-                    Nómina Mensual: ${personal.reduce((sum, p) => sum + p.salario, 0).toLocaleString()}
-                  </Alert>
+                  <div className="flex gap-4 items-center">
+                    <div className="bg-blue-100 border border-blue-300 px-4 py-2 rounded-lg">
+                      <span className="font-semibold text-blue-800">
+                        Nómina Mensual: ${stats.gastosMes.toLocaleString()}
+                      </span>
+                    </div>
+                    <Button onClick={() => { setFormPersonal({ nombre: '', cargo: 'Mesero', salario: '', telefono: '' }); setModalPersonal({ isOpen: true }); }} size="sm">
+                      <Plus size={16} /> Agregar Empleado
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   {personal.map(empleado => (
-                    <div key={empleado.id} className="bg-white rounded-xl shadow-lg p-6">
+                    <div key={empleado.id} className={`bg-white rounded-xl shadow-lg p-6 ${!empleado.activo ? 'opacity-60' : ''}`}>
                       <div className="flex items-start gap-4">
                         <div className="bg-orange-100 p-3 rounded-full">
                           <Users size={24} className="text-orange-600" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-800">{empleado.nombre}</h3>
-                          <p className="text-gray-600">{empleado.cargo}</p>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="text-lg font-bold text-gray-800">{empleado.nombre}</h3>
+                              <p className="text-gray-600">{empleado.cargo}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => toggleActivoPersonal(empleado.id)} className={`px-2 py-1 text-xs rounded ${empleado.activo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                {empleado.activo ? 'Activo' : 'Inactivo'}
+                              </button>
+                              <button onClick={() => eliminarPersonal(empleado.id)} className="text-red-600 hover:text-red-800">
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
                           <div className="mt-3 space-y-2">
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-600">Salario:</span>
@@ -552,12 +631,6 @@ const RestaurantApp = () => {
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-600">Teléfono:</span>
                               <span className="font-semibold">{empleado.telefono}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Estado:</span>
-                              <span className={`font-semibold ${empleado.activo ? 'text-green-600' : 'text-red-600'}`}>
-                                {empleado.activo ? 'Activo' : 'Inactivo'}
-                              </span>
                             </div>
                           </div>
                         </div>
@@ -615,7 +688,7 @@ const RestaurantApp = () => {
                       <h3 className="text-lg font-semibold">Mesas Activas</h3>
                       <Home size={28} />
                     </div>
-                    <p className="text-3xl font-bold">{mesas.filter(m => m.estado === 'ocupada').length}</p>
+                    <p className="text-3xl font-bold">{stats.mesasOcupadas}</p>
                     <p className="text-sm text-purple-100 mt-1">De {mesas.length} totales</p>
                   </div>
 
@@ -629,37 +702,30 @@ const RestaurantApp = () => {
                   </div>
                 </div>
 
-                {/* Últimos Pedidos */}
+                {/* Últimas Ventas */}
                 <div className="bg-white rounded-xl shadow-lg p-6">
-                  <h3 className="text-xl font-bold mb-4 text-gray-800">Últimos Pedidos</h3>
+                  <h3 className="text-xl font-bold mb-4 text-gray-800">Últimas Ventas</h3>
                   <div className="space-y-3">
-                    {pedidos.slice(-10).reverse().map(pedido => {
-                      const mesa = mesas.find(m => m.id === pedido.mesa_id);
-                      return (
-                        <div key={pedido.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                          <div>
-                            <p className="font-semibold text-gray-800">
-                              Mesa {mesa?.numero} - {pedido.nombre_plato}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {new Date(pedido.created_at).toLocaleString('es-CO')}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xl font-bold text-orange-600">
-                              ${pedido.precio.toLocaleString()}
-                            </p>
-                            <span className={`text-xs px-2 py-1 rounded ${
-                              pedido.estado === 'pagado' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {pedido.estado}
-                            </span>
-                          </div>
+                    {ventas.slice(-10).reverse().map(venta => (
+                      <div key={venta.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-semibold text-gray-800">Mesa {venta.mesaId}</p>
+                          <p className="text-sm text-gray-600">
+                            {venta.fecha.toLocaleString('es-CO')}
+                          </p>
                         </div>
-                      );
-                    })}
-                    {pedidos.length === 0 && (
-                      <p className="text-center text-gray-500 py-8">No hay pedidos registrados aún</p>
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-orange-600">
+                            ${venta.total.toLocaleString()}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {venta.pedidos.length} producto(s)
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {ventas.length === 0 && (
+                      <p className="text-center text-gray-500 py-8">No hay ventas registradas aún</p>
                     )}
                   </div>
                 </div>
@@ -668,63 +734,249 @@ const RestaurantApp = () => {
           </div>
         </div>
 
-        {/* Modal: Tomar Pedido */}
+        {/* MODAL: Tomar Pedido */}
         <Modal
           isOpen={modalPedido.isOpen}
           onClose={() => setModalPedido({ isOpen: false, mesa: null })}
           title={`Tomar Pedido - Mesa ${modalPedido.mesa?.numero}`}
         >
-          <div className="space-y-4">
-            <Alert type="info">
-              Selecciona los platos del menú de hoy ({dias[diaActual]})
-            </Alert>
+          <Alert type="info">
+            Selecciona los platos del menú de hoy ({dias[diaActual]})
+          </Alert>
 
-            <div className="grid gap-3">
-              {platosHoy.map(plato => (
-                <button
-                  key={plato.id}
-                  onClick={() => agregarPedido(modalPedido.mesa.id, plato)}
-                  className="flex justify-between items-center p-4 bg-white border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all"
-                  disabled={!plato.disponible}
-                >
-                  <div className="text-left">
-                    <p className="font-semibold text-gray-800">{plato.nombre}</p>
-                    <p className="text-sm text-gray-600">{plato.categoria}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-orange-600">${plato.precio.toLocaleString()}</p>
-                    {!plato.disponible && (
-                      <span className="text-xs text-red-600">Agotado</span>
-                    )}
-                  </div>
-                </button>
-              ))}
-
-              {platosHoy.length === 0 && (
-                <p className="text-center text-gray-500 py-8">No hay platos disponibles para hoy</p>
-              )}
-            </div>
+          <div className="grid gap-3">
+            {platosHoy.filter(p => p.disponible).map((plato) => (
+              <button
+                key={plato.id}
+                onClick={() => tomarPedido(modalPedido.mesa.id, plato)}
+                className="flex justify-between items-center p-4 bg-white border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all"
+              >
+                <div className="text-left">
+                  <p className="font-semibold text-gray-800">{plato.nombre}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-orange-600">${plato.precio.toLocaleString()}</p>
+                </div>
+              </button>
+            ))}
+            {platosHoy.filter(p => p.disponible).length === 0 && (
+              <p className="text-center text-gray-500 py-8">No hay platos disponibles para hoy</p>
+            )}
           </div>
         </Modal>
-      </div>
 
-      {/* CSS Animations */}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { transform: translateY(20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.2s ease-out;
-        }
-        .animate-slideUp {
-          animation: slideUp 0.3s ease-out;
-        }
-      `}</style>
+        {/* MODAL: Agregar Personal */}
+        <Modal
+          isOpen={modalPersonal.isOpen}
+          onClose={() => setModalPersonal({ isOpen: false, empleado: null })}
+          title="Agregar Empleado"
+        >
+          <form onSubmit={agregarPersonal}>
+            <Input
+              label="Nombre completo"
+              value={formPersonal.nombre}
+              onChange={(e) => setFormPersonal({ ...formPersonal, nombre: e.target.value })}
+              required
+              placeholder="Ej: Juan Pérez"
+            />
+            <Select
+              label="Cargo"
+              value={formPersonal.cargo}
+              onChange={(e) => setFormPersonal({ ...formPersonal, cargo: e.target.value })}
+              options={[
+                { value: 'Mesero', label: 'Mesero' },
+                { value: 'Cocinero', label: 'Cocinero' },
+                { value: 'Cajero', label: 'Cajero' },
+                { value: 'Administrador', label: 'Administrador' },
+                { value: 'Ayudante', label: 'Ayudante' }
+              ]}
+              required
+            />
+            <Input
+              label="Salario mensual"
+              type="number"
+              value={formPersonal.salario}
+              onChange={(e) => setFormPersonal({ ...formPersonal, salario: e.target.value })}
+              required
+              min="0"
+              placeholder="1300000"
+            />
+            <Input
+              label="Teléfono"
+              value={formPersonal.telefono}
+              onChange={(e) => setFormPersonal({ ...formPersonal, telefono: e.target.value })}
+              required
+              placeholder="3001234567"
+            />
+            <div className="flex gap-3">
+              <Button type="submit" variant="success" className="flex-1">
+                <Save size={16} /> Guardar
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setModalPersonal({ isOpen: false })}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* MODAL: Agregar Plato */}
+        <Modal
+          isOpen={modalPlato.isOpen}
+          onClose={() => setModalPlato({ isOpen: false, plato: null })}
+          title="Agregar Plato al Menú"
+        >
+          <form onSubmit={agregarPlato}>
+            <Input
+              label="Nombre del plato"
+              value={formPlato.nombre}
+              onChange={(e) => setFormPlato({ ...formPlato, nombre: e.target.value })}
+              required
+              placeholder="Ej: Bandeja Paisa"
+            />
+            <Input
+              label="Precio"
+              type="number"
+              value={formPlato.precio}
+              onChange={(e) => setFormPlato({ ...formPlato, precio: e.target.value })}
+              required
+              min="0"
+              placeholder="25000"
+            />
+            <Select
+              label="Día de la semana"
+              value={formPlato.dia_semana}
+              onChange={(e) => setFormPlato({ ...formPlato, dia_semana: e.target.value })}
+              options={dias.map((dia, idx) => ({ value: idx, label: dia }))}
+              required
+            />
+            <div className="flex gap-3">
+              <Button type="submit" variant="success" className="flex-1">
+                <Save size={16} /> Guardar
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setModalPlato({ isOpen: false })}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* MODAL: Agregar Inventario */}
+        <Modal
+          isOpen={modalInventario.isOpen}
+          onClose={() => setModalInventario({ isOpen: false, item: null })}
+          title="Agregar Item al Inventario"
+        >
+          <form onSubmit={agregarInventario}>
+            <Input
+              label="Nombre del producto"
+              value={formInventario.nombre}
+              onChange={(e) => setFormInventario({ ...formInventario, nombre: e.target.value })}
+              required
+              placeholder="Ej: Pollo"
+            />
+            <Select
+              label="Categoría"
+              value={formInventario.categoria}
+              onChange={(e) => setFormInventario({ ...formInventario, categoria: e.target.value })}
+              options={[
+                { value: 'proteina', label: 'Proteína' },
+                { value: 'acompañamiento', label: 'Acompañamiento' },
+                { value: 'bebida', label: 'Bebida' },
+                { value: 'ingrediente', label: 'Ingrediente' }
+              ]}
+              required
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Cantidad"
+                type="number"
+                value={formInventario.cantidad}
+                onChange={(e) => setFormInventario({ ...formInventario, cantidad: e.target.value })}
+                required
+                min="0"
+                step="0.1"
+                placeholder="50"
+              />
+              <Select
+                label="Unidad"
+                value={formInventario.unidad}
+                onChange={(e) => setFormInventario({ ...formInventario, unidad: e.target.value })}
+                options={[
+                  { value: 'kg', label: 'Kilogramos' },
+                  { value: 'g', label: 'Gramos' },
+                  { value: 'l', label: 'Litros' },
+                  { value: 'ml', label: 'Mililitros' },
+                  { value: 'unidades', label: 'Unidades' }
+                ]}
+                required
+              />
+            </div>
+            <Input
+              label="Precio unitario"
+              type="number"
+              value={formInventario.precio_unitario}
+              onChange={(e) => setFormInventario({ ...formInventario, precio_unitario: e.target.value })}
+              required
+              min="0"
+              placeholder="8000"
+            />
+            <Input
+              label="Stock mínimo"
+              type="number"
+              value={formInventario.stock_minimo}
+              onChange={(e) => setFormInventario({ ...formInventario, stock_minimo: e.target.value })}
+              required
+              min="0"
+              step="0.1"
+              placeholder="10"
+            />
+            <div className="flex gap-3">
+              <Button type="submit" variant="success" className="flex-1">
+                <Save size={16} /> Guardar
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setModalInventario({ isOpen: false })}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* MODAL: Agregar Mesa */}
+        <Modal
+          isOpen={modalMesa.isOpen}
+          onClose={() => setModalMesa({ isOpen: false, mesa: null })}
+          title="Agregar Nueva Mesa"
+        >
+          <form onSubmit={agregarMesa}>
+            <Input
+              label="Número de mesa"
+              type="number"
+              value={formMesa.numero}
+              onChange={(e) => setFormMesa({ ...formMesa, numero: e.target.value })}
+              required
+              min="1"
+              placeholder={mesas.length + 1}
+            />
+            <Input
+              label="Capacidad (personas)"
+              type="number"
+              value={formMesa.capacidad}
+              onChange={(e) => setFormMesa({ ...formMesa, capacidad: e.target.value })}
+              required
+              min="1"
+              placeholder="4"
+            />
+            <div className="flex gap-3">
+              <Button type="submit" variant="success" className="flex-1">
+                <Save size={16} /> Guardar
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setModalMesa({ isOpen: false })}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      </div>
     </div>
   );
 };
