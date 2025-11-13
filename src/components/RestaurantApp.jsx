@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, UtensilsCrossed, Package, Users, TrendingUp, Calendar, DollarSign, ShoppingCart, Plus, X, Check, AlertCircle, Edit, Trash2, Save } from 'lucide-react';
+import { Home, UtensilsCrossed, Package, Users, TrendingUp, Calendar, DollarSign, ShoppingCart, Plus, X, Check, AlertCircle, Edit, Trash2, Save, Minus } from 'lucide-react';
 
 // ============= COMPONENTES UI =============
 
@@ -32,12 +32,19 @@ const Button = ({ children, onClick, variant = 'primary', size = 'md', disabled,
   );
 };
 
-const Modal = ({ isOpen, onClose, title, children }) => {
+const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   if (!isOpen) return null;
+
+  const sizes = {
+    sm: 'max-w-md',
+    md: 'max-w-2xl',
+    lg: 'max-w-4xl',
+    xl: 'max-w-6xl'
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+      <div className={`bg-white rounded-2xl shadow-2xl ${sizes[size]} w-full max-h-[90vh] overflow-hidden`}>
         <div className="bg-gradient-to-r from-orange-600 to-amber-600 p-4 flex justify-between items-center">
           <h3 className="text-xl font-bold text-white">{title}</h3>
           <button onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors">
@@ -106,9 +113,27 @@ const Select = ({ label, value, onChange, options, required }) => (
 
 // ============= DATOS INICIALES =============
 
+const cargarDesdeStorage = (key, initializer) => {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : initializer();
+  } catch (error) {
+    console.error(`Error loading ${key}:`, error);
+    return initializer();
+  }
+};
+
+const guardarEnStorage = (key, data) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error(`Error saving ${key}:`, error);
+  }
+};
+
 const inicializarMesas = () => {
   return Array.from({ length: 12 }, (_, i) => ({
-    id: i + 1,
+    id: `mesa-${i + 1}`,
     numero: i + 1,
     capacidad: i % 3 === 0 ? 6 : i % 2 === 0 ? 2 : 4,
     estado: 'libre',
@@ -119,35 +144,35 @@ const inicializarMesas = () => {
 
 const inicializarInventario = () => {
   return [
-    { id: 1, nombre: 'Pollo', categoria: 'proteina', cantidad: 50, unidad: 'kg', precio_unitario: 8000, stock_minimo: 10 },
-    { id: 2, nombre: 'Carne de Res', categoria: 'proteina', cantidad: 30, unidad: 'kg', precio_unitario: 15000, stock_minimo: 10 },
-    { id: 3, nombre: 'Pescado', categoria: 'proteina', cantidad: 20, unidad: 'kg', precio_unitario: 12000, stock_minimo: 5 },
-    { id: 4, nombre: 'Cerdo', categoria: 'proteina', cantidad: 25, unidad: 'kg', precio_unitario: 10000, stock_minimo: 8 },
-    { id: 5, nombre: 'Arroz', categoria: 'acompañamiento', cantidad: 100, unidad: 'kg', precio_unitario: 2500, stock_minimo: 20 },
-    { id: 6, nombre: 'Papa', categoria: 'acompañamiento', cantidad: 80, unidad: 'kg', precio_unitario: 1500, stock_minimo: 15 },
-    { id: 7, nombre: 'Ensalada', categoria: 'acompañamiento', cantidad: 40, unidad: 'kg', precio_unitario: 3000, stock_minimo: 10 },
-    { id: 8, nombre: 'Frijoles', categoria: 'acompañamiento', cantidad: 60, unidad: 'kg', precio_unitario: 4000, stock_minimo: 15 },
-    { id: 9, nombre: 'Gaseosa', categoria: 'bebida', cantidad: 100, unidad: 'unidades', precio_unitario: 1500, stock_minimo: 20 },
-    { id: 10, nombre: 'Jugo Natural', categoria: 'bebida', cantidad: 50, unidad: 'litros', precio_unitario: 3000, stock_minimo: 10 }
+    { id: 'inv-1', nombre: 'Pollo', categoria: 'proteina', cantidad: 50, unidad: 'kg', precio_unitario: 8000, stock_minimo: 10 },
+    { id: 'inv-2', nombre: 'Carne de Res', categoria: 'proteina', cantidad: 30, unidad: 'kg', precio_unitario: 15000, stock_minimo: 10 },
+    { id: 'inv-3', nombre: 'Pescado', categoria: 'proteina', cantidad: 20, unidad: 'kg', precio_unitario: 12000, stock_minimo: 5 },
+    { id: 'inv-4', nombre: 'Cerdo', categoria: 'proteina', cantidad: 25, unidad: 'kg', precio_unitario: 10000, stock_minimo: 8 },
+    { id: 'inv-5', nombre: 'Arroz', categoria: 'acompañamiento', cantidad: 100, unidad: 'kg', precio_unitario: 2500, stock_minimo: 20 },
+    { id: 'inv-6', nombre: 'Papa', categoria: 'acompañamiento', cantidad: 80, unidad: 'kg', precio_unitario: 1500, stock_minimo: 15 },
+    { id: 'inv-7', nombre: 'Ensalada', categoria: 'acompañamiento', cantidad: 40, unidad: 'kg', precio_unitario: 3000, stock_minimo: 10 },
+    { id: 'inv-8', nombre: 'Frijoles', categoria: 'acompañamiento', cantidad: 60, unidad: 'kg', precio_unitario: 4000, stock_minimo: 15 },
+    { id: 'inv-9', nombre: 'Gaseosa', categoria: 'bebida', cantidad: 100, unidad: 'unidades', precio_unitario: 1500, stock_minimo: 20 },
+    { id: 'inv-10', nombre: 'Jugo Natural', categoria: 'bebida', cantidad: 50, unidad: 'litros', precio_unitario: 3000, stock_minimo: 10 }
   ];
 };
 
 const inicializarPlatos = () => {
   const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   return dias.flatMap((dia, idx) => [
-    { id: `${idx}-1`, nombre: 'Bandeja Paisa', precio: 25000, disponible: true, dia_semana: idx, dia },
-    { id: `${idx}-2`, nombre: 'Pollo Asado', precio: 18000, disponible: true, dia_semana: idx, dia },
-    { id: `${idx}-3`, nombre: 'Pescado Frito', precio: 22000, disponible: true, dia_semana: idx, dia },
-    { id: `${idx}-4`, nombre: 'Cerdo BBQ', precio: 20000, disponible: true, dia_semana: idx, dia }
+    { id: `plato-${idx}-1`, nombre: 'Bandeja Paisa', precio: 25000, disponible: true, dia_semana: idx, dia },
+    { id: `plato-${idx}-2`, nombre: 'Pollo Asado', precio: 18000, disponible: true, dia_semana: idx, dia },
+    { id: `plato-${idx}-3`, nombre: 'Pescado Frito', precio: 22000, disponible: true, dia_semana: idx, dia },
+    { id: `plato-${idx}-4`, nombre: 'Cerdo BBQ', precio: 20000, disponible: true, dia_semana: idx, dia }
   ]);
 };
 
 const inicializarPersonal = () => {
   return [
-    { id: 1, nombre: 'Juan Pérez', cargo: 'Mesero', salario: 1300000, telefono: '3001234567', activo: true },
-    { id: 2, nombre: 'María López', cargo: 'Cocinera', salario: 1500000, telefono: '3009876543', activo: true },
-    { id: 3, nombre: 'Carlos Ruiz', cargo: 'Cajero', salario: 1300000, telefono: '3012345678', activo: true },
-    { id: 4, nombre: 'Ana García', cargo: 'Mesera', salario: 1300000, telefono: '3023456789', activo: true }
+    { id: 'emp-1', nombre: 'Juan Pérez', cargo: 'Mesero', salario: 1300000, telefono: '3001234567', activo: true },
+    { id: 'emp-2', nombre: 'María López', cargo: 'Cocinera', salario: 1500000, telefono: '3009876543', activo: true },
+    { id: 'emp-3', nombre: 'Carlos Ruiz', cargo: 'Cajero', salario: 1300000, telefono: '3012345678', activo: true },
+    { id: 'emp-4', nombre: 'Ana García', cargo: 'Mesera', salario: 1300000, telefono: '3023456789', activo: true }
   ];
 };
 
@@ -155,14 +180,14 @@ const inicializarPersonal = () => {
 
 const RestaurantApp = () => {
   const [activeTab, setActiveTab] = useState('mesas');
-  const [mesas, setMesas] = useState(inicializarMesas());
-  const [inventario, setInventario] = useState(inicializarInventario());
-  const [platos, setPlatos] = useState(inicializarPlatos());
-  const [personal, setPersonal] = useState(inicializarPersonal());
-  const [ventas, setVentas] = useState([]);
+  const [mesas, setMesas] = useState(() => cargarDesdeStorage('mesas', inicializarMesas));
+  const [inventario, setInventario] = useState(() => cargarDesdeStorage('inventario', inicializarInventario));
+  const [platos, setPlatos] = useState(() => cargarDesdeStorage('platos', inicializarPlatos));
+  const [personal, setPersonal] = useState(() => cargarDesdeStorage('personal', inicializarPersonal));
+  const [ventas, setVentas] = useState(() => cargarDesdeStorage('ventas', () => []));
   
   // Modales
-  const [modalPedido, setModalPedido] = useState({ isOpen: false, mesa: null });
+  const [modalPedido, setModalPedido] = useState({ isOpen: false, mesa: null, carrito: [] });
   const [modalPersonal, setModalPersonal] = useState({ isOpen: false, empleado: null });
   const [modalPlato, setModalPlato] = useState({ isOpen: false, plato: null });
   const [modalInventario, setModalInventario] = useState({ isOpen: false, item: null });
@@ -177,35 +202,85 @@ const RestaurantApp = () => {
   const diaActual = new Date().getDay();
   const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-  // ============= FUNCIONES MESAS =============
-  
-  const tomarPedido = (mesaId, plato) => {
+  // Guardar en localStorage cuando cambien los datos
+  useEffect(() => { guardarEnStorage('mesas', mesas); }, [mesas]);
+  useEffect(() => { guardarEnStorage('inventario', inventario); }, [inventario]);
+  useEffect(() => { guardarEnStorage('platos', platos); }, [platos]);
+  useEffect(() => { guardarEnStorage('personal', personal); }, [personal]);
+  useEffect(() => { guardarEnStorage('ventas', ventas); }, [ventas]);
+
+  // ============= FUNCIONES CARRITO DE PEDIDO =============
+
+  const agregarAlCarrito = (plato) => {
+    const itemExistente = modalPedido.carrito.find(item => item.id === plato.id);
+    
+    if (itemExistente) {
+      const nuevoCarrito = modalPedido.carrito.map(item =>
+        item.id === plato.id ? { ...item, cantidad: item.cantidad + 1 } : item
+      );
+      setModalPedido({ ...modalPedido, carrito: nuevoCarrito });
+    } else {
+      setModalPedido({ ...modalPedido, carrito: [...modalPedido.carrito, { ...plato, cantidad: 1 }] });
+    }
+  };
+
+  const removerDelCarrito = (platoId) => {
+    const itemExistente = modalPedido.carrito.find(item => item.id === platoId);
+    
+    if (itemExistente && itemExistente.cantidad > 1) {
+      const nuevoCarrito = modalPedido.carrito.map(item =>
+        item.id === platoId ? { ...item, cantidad: item.cantidad - 1 } : item
+      );
+      setModalPedido({ ...modalPedido, carrito: nuevoCarrito });
+    } else {
+      setModalPedido({ ...modalPedido, carrito: modalPedido.carrito.filter(item => item.id !== platoId) });
+    }
+  };
+
+  const calcularTotalCarrito = () => {
+    return modalPedido.carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  };
+
+  const confirmarPedido = () => {
+    if (modalPedido.carrito.length === 0) {
+      alert('El carrito está vacío');
+      return;
+    }
+
     const nuevasMesas = mesas.map(mesa => {
-      if (mesa.id === mesaId) {
-        const nuevosPedidos = [...mesa.pedidos, { ...plato, cantidad: 1 }];
+      if (mesa.id === modalPedido.mesa.id) {
+        const nuevosPedidos = [...mesa.pedidos, ...modalPedido.carrito];
         return {
           ...mesa,
           estado: 'ocupada',
           pedidos: nuevosPedidos,
-          total: nuevosPedidos.reduce((sum, p) => sum + p.precio, 0)
+          total: nuevosPedidos.reduce((sum, p) => sum + (p.precio * p.cantidad), 0)
         };
       }
       return mesa;
     });
+    
     setMesas(nuevasMesas);
-    setModalPedido({ isOpen: false, mesa: null });
+    setModalPedido({ isOpen: false, mesa: null, carrito: [] });
   };
+
+  const abrirModalPedido = (mesa) => {
+    setModalPedido({ isOpen: true, mesa, carrito: [] });
+  };
+
+  // ============= FUNCIONES MESAS =============
 
   const cerrarMesa = (mesaId) => {
     const mesa = mesas.find(m => m.id === mesaId);
     if (mesa && mesa.total > 0) {
       if (window.confirm(`¿Cerrar mesa ${mesa.numero} con total de $${mesa.total.toLocaleString()}?`)) {
         const nuevaVenta = {
-          id: Date.now(),
+          id: `venta-${Date.now()}`,
           mesaId,
+          numeroMesa: mesa.numero,
           total: mesa.total,
           pedidos: mesa.pedidos,
-          fecha: new Date()
+          fecha: new Date().toISOString()
         };
         setVentas([...ventas, nuevaVenta]);
         
@@ -220,7 +295,7 @@ const RestaurantApp = () => {
   const agregarMesa = (e) => {
     e.preventDefault();
     const nuevaMesa = {
-      id: Date.now(),
+      id: `mesa-${Date.now()}`,
       numero: parseInt(formMesa.numero),
       capacidad: parseInt(formMesa.capacidad),
       estado: 'libre',
@@ -239,7 +314,7 @@ const RestaurantApp = () => {
   };
 
   // ============= FUNCIONES INVENTARIO =============
-  
+
   const actualizarInventario = (itemId, nuevaCantidad) => {
     const nuevoInventario = inventario.map(item =>
       item.id === itemId ? { ...item, cantidad: parseFloat(nuevaCantidad) || 0 } : item
@@ -250,7 +325,7 @@ const RestaurantApp = () => {
   const agregarInventario = (e) => {
     e.preventDefault();
     const nuevoItem = {
-      id: Date.now(),
+      id: `inv-${Date.now()}`,
       ...formInventario,
       cantidad: parseFloat(formInventario.cantidad),
       precio_unitario: parseFloat(formInventario.precio_unitario),
@@ -268,11 +343,11 @@ const RestaurantApp = () => {
   };
 
   // ============= FUNCIONES PLATOS =============
-  
+
   const agregarPlato = (e) => {
     e.preventDefault();
     const nuevoPlato = {
-      id: Date.now(),
+      id: `plato-${Date.now()}`,
       ...formPlato,
       precio: parseFloat(formPlato.precio),
       dia_semana: parseInt(formPlato.dia_semana),
@@ -297,11 +372,11 @@ const RestaurantApp = () => {
   };
 
   // ============= FUNCIONES PERSONAL =============
-  
+
   const agregarPersonal = (e) => {
     e.preventDefault();
     const nuevoEmpleado = {
-      id: Date.now(),
+      id: `emp-${Date.now()}`,
       ...formPersonal,
       salario: parseFloat(formPersonal.salario),
       activo: true
@@ -324,7 +399,7 @@ const RestaurantApp = () => {
   };
 
   // ============= ESTADÍSTICAS =============
-  
+
   const calcularEstadisticas = () => {
     const totalVentas = ventas.reduce((sum, v) => sum + v.total, 0);
     const nominaMensual = personal.filter(p => p.activo).reduce((sum, p) => sum + p.salario, 0);
@@ -341,7 +416,7 @@ const RestaurantApp = () => {
   };
 
   const stats = calcularEstadisticas();
-  const platosHoy = platos.filter(p => p.dia_semana === diaActual);
+  const platosHoy = platos.filter(p => p.dia_semana === diaActual && p.disponible);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
@@ -395,14 +470,14 @@ const RestaurantApp = () => {
                         Ocupada: {mesas.filter(m => m.estado === 'ocupada').length}
                       </span>
                     </div>
-                    <Button onClick={() => { setFormMesa({ numero: mesas.length + 1, capacidad: 4 }); setModalMesa({ isOpen: true }); }} size="sm">
+                    <Button onClick={() => { setFormMesa({ numero: Math.max(...mesas.map(m => m.numero)) + 1, capacidad: 4 }); setModalMesa({ isOpen: true }); }} size="sm">
                       <Plus size={16} /> Agregar Mesa
                     </Button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {mesas.map(mesa => (
+                  {mesas.sort((a, b) => a.numero - b.numero).map(mesa => (
                     <div
                       key={mesa.id}
                       className={`p-6 rounded-xl shadow-lg transition-all ${
@@ -414,9 +489,11 @@ const RestaurantApp = () => {
                       <div className="text-center">
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="text-xl font-bold text-gray-800">Mesa {mesa.numero}</h3>
-                          <button onClick={() => eliminarMesa(mesa.id)} className="text-red-600 hover:text-red-800">
-                            <Trash2 size={16} />
-                          </button>
+                          {mesa.estado === 'libre' && (
+                            <button onClick={() => eliminarMesa(mesa.id)} className="text-red-600 hover:text-red-800">
+                              <Trash2 size={16} />
+                            </button>
+                          )}
                         </div>
                         <p className="text-sm text-gray-600">Cap: {mesa.capacidad} personas</p>
                         <span
@@ -431,16 +508,23 @@ const RestaurantApp = () => {
 
                         {mesa.estado === 'ocupada' && (
                           <div className="mt-4 space-y-2">
-                            <div className="text-sm text-gray-600">{mesa.pedidos.length} pedido(s)</div>
-                            <div className="text-lg font-bold text-orange-600">${mesa.total.toLocaleString()}</div>
+                            <div className="text-left bg-white p-2 rounded max-h-32 overflow-y-auto">
+                              {mesa.pedidos.map((pedido, idx) => (
+                                <div key={idx} className="text-xs text-gray-700 flex justify-between">
+                                  <span>{pedido.cantidad}x {pedido.nombre}</span>
+                                  <span className="font-semibold">${(pedido.precio * pedido.cantidad).toLocaleString()}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="text-lg font-bold text-orange-600">Total: ${mesa.total.toLocaleString()}</div>
                             <Button onClick={() => cerrarMesa(mesa.id)} variant="success" size="sm" className="w-full">
-                              <Check size={16} /> Cerrar Mesa
+                              <Check size={16} /> Cobrar Mesa
                             </Button>
                           </div>
                         )}
 
                         {mesa.estado === 'libre' && (
-                          <Button onClick={() => setModalPedido({ isOpen: true, mesa })} variant="primary" size="sm" className="w-full mt-4">
+                          <Button onClick={() => abrirModalPedido(mesa)} variant="primary" size="sm" className="w-full mt-4">
                             <Plus size={16} /> Tomar Pedido
                           </Button>
                         )}
@@ -492,7 +576,7 @@ const RestaurantApp = () => {
                                 </div>
                                 <div className="flex gap-2">
                                   <button onClick={() => toggleDisponibilidadPlato(plato.id)} className={`px-2 py-1 text-xs rounded ${plato.disponible ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                                    {plato.disponible ? 'Disponible' : 'Agotado'}
+                                    {plato.disponible ? '✓ Disponible' : '✗ Agotado'}
                                   </button>
                                   <button onClick={() => eliminarPlato(plato.id)} className="text-red-600 hover:text-red-800">
                                     <Trash2 size={16} />
@@ -501,6 +585,9 @@ const RestaurantApp = () => {
                               </div>
                             </div>
                           ))}
+                          {platosDia.length === 0 && (
+                            <p className="text-gray-500 col-span-2 text-center py-4">No hay platos para este día</p>
+                          )}
                         </div>
                       </div>
                     );
@@ -709,9 +796,9 @@ const RestaurantApp = () => {
                     {ventas.slice(-10).reverse().map(venta => (
                       <div key={venta.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                         <div>
-                          <p className="font-semibold text-gray-800">Mesa {venta.mesaId}</p>
+                          <p className="font-semibold text-gray-800">Mesa {venta.numeroMesa}</p>
                           <p className="text-sm text-gray-600">
-                            {venta.fecha.toLocaleString('es-CO')}
+                            {new Date(venta.fecha).toLocaleString('es-CO')}
                           </p>
                         </div>
                         <div className="text-right">
@@ -719,7 +806,7 @@ const RestaurantApp = () => {
                             ${venta.total.toLocaleString()}
                           </p>
                           <p className="text-sm text-gray-600">
-                            {venta.pedidos.length} producto(s)
+                            {venta.pedidos.reduce((sum, p) => sum + p.cantidad, 0)} item(s)
                           </p>
                         </div>
                       </div>
@@ -734,34 +821,87 @@ const RestaurantApp = () => {
           </div>
         </div>
 
-        {/* MODAL: Tomar Pedido */}
+        {/* MODAL: Tomar Pedido con Carrito */}
         <Modal
           isOpen={modalPedido.isOpen}
-          onClose={() => setModalPedido({ isOpen: false, mesa: null })}
-          title={`Tomar Pedido - Mesa ${modalPedido.mesa?.numero}`}
+          onClose={() => setModalPedido({ isOpen: false, mesa: null, carrito: [] })}
+          title={`Tomar Pedido - Mesa ${modalPedido.mesa?.numero} (Capacidad: ${modalPedido.mesa?.capacidad} personas)`}
+          size="lg"
         >
-          <Alert type="info">
-            Selecciona los platos del menú de hoy ({dias[diaActual]})
-          </Alert>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Menú del día */}
+            <div>
+              <h4 className="font-bold text-lg mb-3 text-gray-800">Menú de Hoy ({dias[diaActual]})</h4>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {platosHoy.map((plato) => (
+                  <button
+                    key={plato.id}
+                    onClick={() => agregarAlCarrito(plato)}
+                    className="w-full flex justify-between items-center p-3 bg-white border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all"
+                  >
+                    <div className="text-left">
+                      <p className="font-semibold text-gray-800">{plato.nombre}</p>
+                      <p className="text-sm text-gray-600">${plato.precio.toLocaleString()}</p>
+                    </div>
+                    <Plus size={20} className="text-orange-600" />
+                  </button>
+                ))}
+                {platosHoy.length === 0 && (
+                  <p className="text-center text-gray-500 py-8">No hay platos disponibles para hoy</p>
+                )}
+              </div>
+            </div>
 
-          <div className="grid gap-3">
-            {platosHoy.filter(p => p.disponible).map((plato) => (
-              <button
-                key={plato.id}
-                onClick={() => tomarPedido(modalPedido.mesa.id, plato)}
-                className="flex justify-between items-center p-4 bg-white border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all"
-              >
-                <div className="text-left">
-                  <p className="font-semibold text-gray-800">{plato.nombre}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-orange-600">${plato.precio.toLocaleString()}</p>
-                </div>
-              </button>
-            ))}
-            {platosHoy.filter(p => p.disponible).length === 0 && (
-              <p className="text-center text-gray-500 py-8">No hay platos disponibles para hoy</p>
-            )}
+            {/* Carrito */}
+            <div>
+              <h4 className="font-bold text-lg mb-3 text-gray-800">Carrito de Pedido</h4>
+              <div className="bg-gray-50 rounded-lg p-4 min-h-[300px]">
+                {modalPedido.carrito.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">El carrito está vacío<br/>Selecciona platos del menú</p>
+                ) : (
+                  <div className="space-y-3">
+                    {modalPedido.carrito.map((item) => (
+                      <div key={item.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200">
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-800">{item.nombre}</p>
+                          <p className="text-sm text-gray-600">${item.precio.toLocaleString()} c/u</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => removerDelCarrito(item.id)}
+                            className="bg-red-100 text-red-600 p-1 rounded hover:bg-red-200"
+                          >
+                            <Minus size={16} />
+                          </button>
+                          <span className="font-bold text-lg w-8 text-center">{item.cantidad}</span>
+                          <button
+                            onClick={() => agregarAlCarrito(item)}
+                            className="bg-green-100 text-green-600 p-1 rounded hover:bg-green-200"
+                          >
+                            <Plus size={16} />
+                          </button>
+                        </div>
+                        <div className="ml-4 text-right">
+                          <p className="font-bold text-orange-600">${(item.precio * item.cantidad).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {modalPedido.carrito.length > 0 && (
+                  <div className="mt-4 pt-4 border-t-2 border-gray-300">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="font-bold text-lg">Total:</span>
+                      <span className="font-bold text-2xl text-orange-600">${calcularTotalCarrito().toLocaleString()}</span>
+                    </div>
+                    <Button onClick={confirmarPedido} variant="success" className="w-full" size="lg">
+                      <Check size={20} /> Confirmar Pedido ({modalPedido.carrito.reduce((sum, item) => sum + item.cantidad, 0)} items)
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </Modal>
 
@@ -955,7 +1095,7 @@ const RestaurantApp = () => {
               onChange={(e) => setFormMesa({ ...formMesa, numero: e.target.value })}
               required
               min="1"
-              placeholder={mesas.length + 1}
+              placeholder={Math.max(...mesas.map(m => m.numero)) + 1}
             />
             <Input
               label="Capacidad (personas)"
